@@ -32,7 +32,7 @@ public:
 
   /**
    * Increments the cumCount of the current node and all the following nodes
-   * and returns the totalCount of the whole context
+   * and returns the totalCount of the whole context including the ESC symbol
    * @return totalCount {int} The totalCount of this context
    */
   int updateCumCountAndGetTotalCount()
@@ -43,6 +43,6 @@ public:
       cumCount++;
       curr = curr->nextNode;
     }
-    return curr->cumCount + count;
+    return curr->cumCount + count + 1;
   }
 };

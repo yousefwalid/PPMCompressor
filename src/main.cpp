@@ -2,10 +2,30 @@
 #include <fstream>
 #include <string>
 #include "trie.cpp"
+
 using namespace std;
+
+struct countStats
+{
+  int count, cumCount, totalCount;
+  bool isEsc;
+};
+
+uint8_t l = 0, u = 255;
+int wordCnt = 0;
+int wordSize = 0;
+
+ofstream binaryStream;
+
+string stream = "";
 
 TrieNode *zeroContext;
 const int maxContext = 2; // The maximum number of contexts
+
+string getSmallerContext(string context)
+{
+  return context.erase(0, 1);
+}
 
 /**
  * Traverses to a given node in the trie,
@@ -54,7 +74,8 @@ void increaseCountAndCumCount(TrieNode *node, int cnt = 1)
 }
 
 /**
- * Adds a node to the trie given the context, and also adds it to all the smaller contexts
+ * Adds a node to the trie given the context, and also adds it to all the smaller contexts,
+ * it also updates the count of the parent nodes and all their following nodes
  * @param symbol {int} The symbol of the node to be added
  * @param context {string} The context of the node to be added
  * @return addedNodePointer {TrieNode *} The address of the node just added
@@ -127,9 +148,76 @@ void createInitialNodes(string initialWord)
   }
 }
 
-void encode(const char *inputFileName)
+void handleRanges(int count, int cumCount, int totalCount)
+{
+  int diff = (u - l + 1);
+  uint8_t new_l = (diff * cumCount) / totalCount;
+  uint8_t new_u = (diff * (cumCount + count)) / totalCount - 1;
+  l = new_l;
+  u = new_u;
+
+  while (l <= 127 && u <= 127 || l >= 128 && u >= 128)
+  {
+    stream += (((l >> 7) & 1) + '0');
+    l <<= 1;
+    u <<= 1;
+    u += 1;
+  }
+}
+
+/**
+ * Returns false if symbol not found on the context given
+ */
+
+bool handleByte(int symbol, string context)
+{
+  auto curr = zeroContext;
+  for (int i = 0; i < context.size(); i++)
+  {
+    while (curr != nullptr && curr->symbol != (int)context[i])
+      curr = curr->nextNode;
+
+    curr = curr->nextContextHead;
+  }
+
+  if (curr == nullptr)
+  {
+    handleRanges(1, 0, 1);
+    handleByte(symbol, getSmallerContext(context));
+    return false;
+  }
+  else
+  {
+    while (curr->nextNode != nullptr && curr->symbol != symbol)
+      curr = curr->nextNode;
+
+    int count, cumCount, totalCount;
+
+    if (curr->symbol == symbol)
+    {
+      count = curr->count;
+      cumCount = curr->cumCount;
+      while (curr->nextNode != nullptr)
+        curr = curr->nextNode;
+      totalCount = curr->cumCount + curr->count + 1;
+      handleRanges(count, cumCount, totalCount);
+    }
+    else
+    {
+      count = 1;
+      cumCount = curr->count + curr->cumCount;
+      totalCount = cumCount + 1;
+      handleRanges(count, cumCount, totalCount);
+      handleByte(symbol, getSmallerContext(context));
+    }
+  }
+}
+
+void encode(const char *inputFileName, const char *binaryFileName)
 {
   ifstream inputStream(inputFileName);
+  binaryStream.open(binaryFileName);
+
   char currentByte;
   string initialWord = "";
   for (int i = 0; i < 8; i++)
@@ -151,4 +239,5 @@ int main()
   createInitialNodes("thisbis");
   int x;
   cin >> x;
+  //thisbisbthe
 }
