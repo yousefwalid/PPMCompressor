@@ -169,10 +169,10 @@ void handleRanges(int count, int cumCount, int totalCount)
  * Returns false if symbol not found on the context given
  */
 
-bool handleByte(int symbol, string context)
+TrieNode *handleByte(int symbol, string context)
 {
   auto curr = zeroContext;
-  for (int i = 0; i < context.size(); i++)
+  for (int i = 0; i < context.size(); i++) // traverse to context
   {
     while (curr != nullptr && curr->symbol != (int)context[i])
       curr = curr->nextNode;
@@ -180,35 +180,38 @@ bool handleByte(int symbol, string context)
     curr = curr->nextContextHead;
   }
 
-  if (curr == nullptr)
+  if (curr == nullptr) // parent context does not have any children, encode <ESC> and go to lower context
   {
     handleRanges(1, 0, 1);
     handleByte(symbol, getSmallerContext(context));
-    return false;
+    return nullptr;
   }
   else
   {
-    while (curr->nextNode != nullptr && curr->symbol != symbol)
+    while (curr->nextNode != nullptr && curr->symbol != symbol) // look for symbol or reach end
       curr = curr->nextNode;
 
     int count, cumCount, totalCount;
 
-    if (curr->symbol == symbol)
+    if (curr->symbol == symbol) // if found symbol, get stats and encode ranges
     {
+      auto originalNode = curr;
       count = curr->count;
       cumCount = curr->cumCount;
       while (curr->nextNode != nullptr)
         curr = curr->nextNode;
       totalCount = curr->cumCount + curr->count + 1;
       handleRanges(count, cumCount, totalCount);
+      return originalNode;
     }
-    else
+    else // if reached end, encode <ESC> and go check in lower context
     {
       count = 1;
       cumCount = curr->count + curr->cumCount;
       totalCount = cumCount + 1;
       handleRanges(count, cumCount, totalCount);
       handleByte(symbol, getSmallerContext(context));
+      return nullptr;
     }
   }
 }
@@ -220,13 +223,30 @@ void encode(const char *inputFileName, const char *binaryFileName)
 
   char currentByte;
   string initialWord = "";
-  for (int i = 0; i < 8; i++)
+  string context = "";
+  for (int i = 0; i < 7; i++)
   {
     inputStream.get(currentByte);
     initialWord.push_back(currentByte);
+    context += currentByte;
+    if (context.length() > maxContext)
+      context.erase(0, 1);
   }
 
   createInitialNodes(initialWord);
+
+  while (inputStream.get(currentByte))
+  {
+    auto foundNode = handleByte(currentByte, context);
+    if (!foundNode)
+      recursivelyAddNode(currentByte, context);
+    else
+      increaseCountAndCumCount(foundNode);
+
+    context += currentByte;
+    if (context.length() > maxContext)
+      context.erase(0, 1);
+  }
 }
 
 void decode()
@@ -235,9 +255,5 @@ void decode()
 
 int main()
 {
-  //encode("enwik8");
-  createInitialNodes("thisbis");
-  int x;
-  cin >> x;
-  //thisbisbthe
+  encode("enwik8", "binfile");
 }
