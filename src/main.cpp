@@ -35,6 +35,25 @@ TrieNode *traverseToNode(int symbol, string context)
 }
 
 /**
+ * Increases the count of the given node and all its lower contexts,
+ * also updates the cumCount of next nodes of those nodes
+ * @param node {TrieNode *} Pointer to the node to be increased
+ * @param cnt {int} The value to increase the count with
+ */
+
+void increaseCountAndCumCount(TrieNode *node, int cnt = 1)
+{
+  while (node != nullptr)
+  {
+    node->count += cnt;
+    auto node2 = node->nextNode;
+    while (node2 != nullptr)
+      node2->cumCount += cnt, node2 = node2->nextNode;
+    node = node->prevContext;
+  }
+}
+
+/**
  * Adds a node to the trie given the context, and also adds it to all the smaller contexts
  * @param symbol {int} The symbol of the node to be added
  * @param context {string} The context of the node to be added
@@ -75,7 +94,7 @@ TrieNode *recursivelyAddNode(int symbol, string context)
     if (!foundNode)
       lowerContextNode = recursivelyAddNode(symbol, previousContext);
     else
-      return foundNode;
+      increaseCountAndCumCount(foundNode);
 
     auto newNode = new TrieNode(symbol);
     newNode->prevContext = lowerContextNode;
@@ -104,7 +123,7 @@ void createInitialNodes(string initialWord)
     recursivelyAddNode(initialWord[i], context);
     context = context + initialWord[i];
     if (context.length() > maxContext)
-      context.erase(0);
+      context.erase(0, 1);
   }
 }
 
