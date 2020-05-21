@@ -74,6 +74,8 @@ TrieNode *recursivelyAddNode(int symbol, string context)
     auto lowerContextNode = foundNode;
     if (!foundNode)
       lowerContextNode = recursivelyAddNode(symbol, previousContext);
+    else
+      return foundNode;
 
     auto newNode = new TrieNode(symbol);
     newNode->prevContext = lowerContextNode;
