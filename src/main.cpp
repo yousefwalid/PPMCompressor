@@ -11,7 +11,13 @@ struct countStats
   bool isEsc;
 };
 
-uint8_t l = 0, u = 255;
+#define NUM_BITS 16
+#define LOW_RANGE 0
+#define MID_RANGE 32767
+#define HIGH_RANGE 65535
+
+uint16_t l = LOW_RANGE, u = HIGH_RANGE;
+
 int wordCnt = 0;
 int wordSize = 0;
 
@@ -156,9 +162,9 @@ void handleRanges(int count, int cumCount, int totalCount)
   l = new_l;
   u = new_u;
 
-  while (l <= 127 && u <= 127 || l >= 128 && u >= 128)
+  while (l <= MID_RANGE && u <= MID_RANGE || l >= MID_RANGE + 1 && u >= MID_RANGE + 1)
   {
-    stream += (((l >> 7) & 1) + '0');
+    stream += (((l >> (NUM_BITS - 1)) & 1) + '0');
     l <<= 1;
     u <<= 1;
     u += 1;
@@ -189,7 +195,6 @@ TrieNode *handleByte(int symbol, string context)
   if (curr == nullptr) // parent context does not have any children, encode <ESC> and go to lower context
   {
     handleRanges(1, 0, 1);
-
     if (context == "")
       encodeNegativeContext(symbol);
     else
