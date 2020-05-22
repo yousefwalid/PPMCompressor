@@ -1,22 +1,15 @@
 #include <iostream>
 #include <fstream>
 #include <string>
-#include "trie.cpp"
-
+#include "trie_node.h"
 using namespace std;
 
-struct countStats
-{
-  int count, cumCount, totalCount;
-  bool isEsc;
-};
-
-#define NUM_BITS 16
+#define NUM_BITS 8
 #define LOW_RANGE 0
-#define MID_RANGE 32767
-#define HIGH_RANGE 65535
+#define HIGH_RANGE 255
+#define MID_RANGE HIGH_RANGE / 2
 
-uint16_t l = LOW_RANGE, u = HIGH_RANGE;
+uint8_t l = LOW_RANGE, u = HIGH_RANGE;
 
 int wordCnt = 0;
 int wordSize = 0;
@@ -24,6 +17,7 @@ int wordSize = 0;
 ofstream binaryStream;
 
 string stream = "";
+string decodeStream = "";
 
 TrieNode *zeroContext;
 const int maxContext = 2; // The maximum number of contexts
@@ -173,7 +167,10 @@ void handleRanges(int count, int cumCount, int totalCount)
 
 void encodeNegativeContext(int symbol)
 {
-  handleRanges(1, symbol, 256);
+  for (int i = 0; i < 8; i++)
+    stream += ('0' + ((symbol >> (7 - i)) & 1));
+  l = LOW_RANGE;
+  u = HIGH_RANGE;
 }
 
 /**
@@ -242,18 +239,8 @@ void encode(const char *inputFileName, const char *binaryFileName)
   binaryStream.open(binaryFileName);
 
   char currentByte;
-  string initialWord = "";
-  string context = "";
-  for (int i = 0; i < 7; i++)
-  {
-    inputStream.get(currentByte);
-    initialWord.push_back(currentByte);
-    context += currentByte;
-    if (context.length() > maxContext)
-      context.erase(0, 1);
-  }
 
-  createInitialNodes(initialWord);
+  string context = "";
 
   while (inputStream.get(currentByte))
   {
@@ -267,10 +254,21 @@ void encode(const char *inputFileName, const char *binaryFileName)
     if (context.length() > maxContext)
       context.erase(0, 1);
   }
+
+  binaryStream << stream;
 }
 
-void decode()
+void initializeDecode()
 {
+  l = LOW_RANGE;
+  u = HIGH_RANGE;
+
+  string context = "";
+}
+
+void decode(const char *binaryFileName, const char *outputFileName)
+{
+  initializeDecode();
 }
 
 // remember to increase range of l and u
@@ -278,4 +276,5 @@ void decode()
 int main()
 {
   encode("enwik8", "binfile");
+  decode("binfile", "output");
 }
