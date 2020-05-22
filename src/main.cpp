@@ -2,6 +2,7 @@
 #include <fstream>
 #include <string>
 #include "trie_node.h"
+#include "arith_e.h"
 using namespace std;
 
 #define NUM_BITS 8
@@ -19,7 +20,10 @@ ofstream binaryStream;
 string stream = "";
 string decodeStream = "";
 
+int decodeIdx = 0;
+
 TrieNode *zeroContext;
+TrieNode *decodeZeroContext;
 const int maxContext = 2; // The maximum number of contexts
 
 string getSmallerContext(string context)
@@ -262,13 +266,81 @@ void initializeDecode()
 {
   l = LOW_RANGE;
   u = HIGH_RANGE;
+}
 
-  string context = "";
+int decodeNegativeContext()
+{
+  int symbol = 0;
+  for (int i = 0; i < 8; i++)
+  {
+    symbol += (decodeStream[decodeIdx++] - '0');
+    symbol <<= 1;
+  }
+  return symbol;
+}
+
+bool nodeEquiRanges(TrieNode *node, int totalCount)
+{
+  if (!node)
+    return false;
+
+  int diff = (u - l + 1);
+  int cumCount = node->cumCount;
+  int count = node->count;
+
+  uint8_t ll, uu;
+
+  uint8_t new_l = (diff * cumCount) / totalCount;
+  uint8_t new_u = (diff * (cumCount + count)) / totalCount - 1;
+  return (new_l == ll && new_u == uu);
+}
+
+int decodeByte(string context)
+{
+  auto curr = decodeZeroContext;
+
+  for (int i = 0; i < context.size(); i++) // traverse to context
+  {
+    while (curr != nullptr && curr->symbol != (int)context[i])
+      curr = curr->nextNode;
+
+    curr = curr->nextContextHead;
+  }
+
+  int contextTotalCount = 0; // the total count of the current context
+
+  auto curr2 = curr; // use to traverse the current context and get total count
+  while (curr2 && curr2->nextNode)
+    curr2 = curr2->nextNode;
+
+  if (!curr2)
+    contextTotalCount = 1;
+  else
+    contextTotalCount = curr2->cumCount + curr2->count + 1;
+
+  int symbol;
+
+  if (curr == nullptr) // parent context does not have any children, consume <ESC> and go to lower context
+  {
+    if (context == "")
+      symbol = decodeNegativeContext();
+    else
+      symbol = decodeByte(getSmallerContext(context));
+  }
+  else
+  {
+    while (curr->nextNode != nullptr) // look for symbol or reach end
+      curr = curr->nextNode;
+
+    int count, cumCount, totalCount;
+  }
 }
 
 void decode(const char *binaryFileName, const char *outputFileName)
 {
   initializeDecode();
+  decodeStream = stream;
+  string context = "";
 }
 
 // remember to increase range of l and u
