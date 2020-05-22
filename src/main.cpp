@@ -165,8 +165,14 @@ void handleRanges(int count, int cumCount, int totalCount)
   }
 }
 
+void encodeNegativeContext(int symbol)
+{
+  handleRanges(1, symbol, 256);
+}
+
 /**
- * Returns false if symbol not found on the context given
+ * Returns nullptr if symbol not found on the context given
+ * and pointer to the node if found
  */
 
 TrieNode *handleByte(int symbol, string context)
@@ -183,7 +189,12 @@ TrieNode *handleByte(int symbol, string context)
   if (curr == nullptr) // parent context does not have any children, encode <ESC> and go to lower context
   {
     handleRanges(1, 0, 1);
-    handleByte(symbol, getSmallerContext(context));
+
+    if (context == "")
+      encodeNegativeContext(symbol);
+    else
+      handleByte(symbol, getSmallerContext(context));
+
     return nullptr;
   }
   else
@@ -210,7 +221,11 @@ TrieNode *handleByte(int symbol, string context)
       cumCount = curr->count + curr->cumCount;
       totalCount = cumCount + 1;
       handleRanges(count, cumCount, totalCount);
-      handleByte(symbol, getSmallerContext(context));
+      if (context == "")
+        encodeNegativeContext(symbol);
+      else
+        handleByte(symbol, getSmallerContext(context));
+
       return nullptr;
     }
   }
@@ -252,6 +267,8 @@ void encode(const char *inputFileName, const char *binaryFileName)
 void decode()
 {
 }
+
+// remember to increase range of l and u
 
 int main()
 {
